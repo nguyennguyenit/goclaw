@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,8 +29,13 @@ func (s *PGCronStore) RunJob(ctx context.Context, jobID string, force bool) (boo
 	// Claim the job for forced execution by clearing next_run_at.
 	// executeOneJob calls loadClaimedJob which requires next_run_at IS NULL — same
 	// invariant that claimDueJob establishes for scheduled runs.
-	if id, parseErr := uuid.Parse(jobID); parseErr == nil {
-		s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', next_run_at = NULL, updated_at = $1 WHERE id = $2", time.Now(), id)
+	id, parseErr := uuid.Parse(jobID)
+	if parseErr != nil {
+		return false, "", fmt.Errorf("invalid job id %q: %w", jobID, parseErr)
+	}
+	if _, err := s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', next_run_at = NULL, updated_at = $1 WHERE id = $2", time.Now(), id); err != nil {
+		slog.Warn("cron: failed to claim job for forced run", "jobId", jobID, "error", err)
+		return false, "", err
 	}
 	s.mu.Lock()
 	s.cacheLoaded = false

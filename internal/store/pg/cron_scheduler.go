@@ -71,8 +71,12 @@ func (s *PGCronStore) InvalidateCache() {
 func (s *PGCronStore) recomputeStaleJobs() {
 	// Reset stale 'running' status — jobs that were mid-execution when the server
 	// crashed will never self-recover, so mark them as interrupted on startup.
-	s.db.ExecContext(s.baseCtx,
-		`UPDATE cron_jobs SET last_status = 'interrupted' WHERE last_status = 'running'`)
+	if res, err := s.db.ExecContext(s.baseCtx,
+		`UPDATE cron_jobs SET last_status = 'interrupted' WHERE last_status = 'running'`); err != nil {
+		slog.Warn("cron: failed to reset stale running jobs on startup", "error", err)
+	} else if n, _ := res.RowsAffected(); n > 0 {
+		slog.Info("cron: reset stale running jobs to interrupted", "count", n)
+	}
 
 	rows, err := s.db.QueryContext(s.baseCtx,
 		`SELECT id, schedule_kind, cron_expression, run_at, timezone, interval_ms
