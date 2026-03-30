@@ -33,9 +33,13 @@ func (s *PGCronStore) RunJob(ctx context.Context, jobID string, force bool) (boo
 	if parseErr != nil {
 		return false, "", fmt.Errorf("invalid job id %q: %w", jobID, parseErr)
 	}
-	if _, err := s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', next_run_at = NULL, updated_at = $1 WHERE id = $2", time.Now(), id); err != nil {
+	res, err := s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', next_run_at = NULL, updated_at = $1 WHERE id = $2 AND last_status != 'running'", time.Now(), id)
+	if err != nil {
 		slog.Warn("cron: failed to claim job for forced run", "jobId", jobID, "error", err)
 		return false, "", err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return false, "", fmt.Errorf("job %s is already running", jobID)
 	}
 	s.mu.Lock()
 	s.cacheLoaded = false
