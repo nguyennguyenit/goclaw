@@ -25,9 +25,11 @@ func (s *PGCronStore) RunJob(ctx context.Context, jobID string, force bool) (boo
 		return false, "", fmt.Errorf("no job handler configured")
 	}
 
-	// Mark job as running before execution
+	// Claim the job for forced execution by clearing next_run_at.
+	// executeOneJob calls loadClaimedJob which requires next_run_at IS NULL — same
+	// invariant that claimDueJob establishes for scheduled runs.
 	if id, parseErr := uuid.Parse(jobID); parseErr == nil {
-		s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', updated_at = $1 WHERE id = $2", time.Now(), id)
+		s.db.ExecContext(ctx, "UPDATE cron_jobs SET last_status = 'running', next_run_at = NULL, updated_at = $1 WHERE id = $2", time.Now(), id)
 	}
 	s.mu.Lock()
 	s.cacheLoaded = false
