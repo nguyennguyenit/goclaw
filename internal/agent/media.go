@@ -357,7 +357,9 @@ func (l *Loop) enrichImagePaths(messages []providers.Message) {
 		}
 		content := messages[i].Content
 		changed := false
-		for _, ref := range messages[i].MediaRefs {
+		// Iterate in reverse so last-tag replacement preserves the original ref order.
+		for j := len(messages[i].MediaRefs) - 1; j >= 0; j-- {
+			ref := messages[i].MediaRefs[j]
 			if ref.Kind != "image" {
 				continue
 			}
