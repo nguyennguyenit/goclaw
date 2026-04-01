@@ -39,6 +39,7 @@ export function EventDetailDialog({ entry, onClose }: EventDetailDialogProps) {
         <div className="min-h-0 min-w-0 flex-1 overflow-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
           <div className="relative min-w-0 rounded-md bg-muted p-4">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="sticky top-0 right-0 z-10 ml-auto flex h-7 gap-1 bg-background/80 text-xs backdrop-blur-sm"
@@ -51,7 +52,7 @@ export function EventDetailDialog({ entry, onClose }: EventDetailDialogProps) {
               )}
               {copied ? t("detail.copied") : t("detail.copy")}
             </Button>
-            <pre className="min-w-0 overflow-x-auto whitespace-pre-wrap break-all pt-2 text-sm leading-relaxed">
+            <pre className="min-w-0 overflow-x-auto whitespace-pre-wrap break-words pt-2 text-sm leading-relaxed">
               <code>
                 <JsonHighlight json={json} />
               </code>
